@@ -12,6 +12,7 @@ import { CallsModule } from '././calls/calls.module';
 import { MailModule } from '././mail/mail.module';
 import { MediaModule } from '././media/media.module';
 import { SocketsModule } from '././sockets/sockets.module';
+import { PingController } from './ping.controller';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { SocketsModule } from '././sockets/sockets.module';
     MediaModule,
     SocketsModule,
   ],
+  controllers: [PingController],
   providers: [
     {
       provide: APP_GUARD,

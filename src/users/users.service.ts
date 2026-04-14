@@ -44,7 +44,7 @@ export class UsersService {
     const user = await this.userModel
       .findById(userId)
       .select('-password -refreshToken -verificationToken -resetPasswordToken -resetPasswordExpires')
-      .populate('friends', 'username avatar')
+      .populate('friends', 'username name avatar')
       .lean();
 
     if (!user) throw new NotFoundException('User not found');
@@ -98,7 +98,7 @@ export class UsersService {
           },
         ],
       })
-      .select('username avatar bio profileVisibility')
+      .select('username name avatar bio profileVisibility')
       .limit(20)
       .lean();
   }
@@ -240,7 +240,7 @@ export class UsersService {
   async getFriends(userId: string): Promise<any[]> {
     const user = await this.userModel
       .findById(userId)
-      .populate('friends', 'username avatar bio')
+      .populate('friends', 'username name avatar bio')
       .lean();
     return user?.friends || [];
   }
@@ -248,7 +248,7 @@ export class UsersService {
   async getPendingFriendRequests(userId: string): Promise<any[]> {
     const user = await this.userModel
       .findById(userId)
-      .populate('pendingFriendRequests', 'username avatar bio')
+      .populate('pendingFriendRequests', 'username name avatar bio')
       .lean();
     return user?.pendingFriendRequests || [];
   }
@@ -256,7 +256,7 @@ export class UsersService {
   async getSentFriendRequests(userId: string): Promise<any[]> {
     const user = await this.userModel
       .findById(userId)
-      .populate('sentFriendRequests', 'username avatar bio')
+      .populate('sentFriendRequests', 'username name avatar bio')
       .lean();
     return user?.sentFriendRequests || [];
   }
