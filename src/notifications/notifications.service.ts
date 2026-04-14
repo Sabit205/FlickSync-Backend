@@ -20,13 +20,20 @@ export class NotificationsService {
 
   private async initFirebase() {
     try {
-      const admin = await import('firebase-admin');
+      let admin: any;
+      try {
+        admin = await import('firebase-admin');
+      } catch {
+        this.logger.warn('firebase-admin not installed — push notifications disabled');
+        return;
+      }
+
       const projectId = this.configService.get<string>('FCM_PROJECT_ID');
       const clientEmail = this.configService.get<string>('FCM_CLIENT_EMAIL');
       const privateKey = this.configService.get<string>('FCM_PRIVATE_KEY');
 
       if (projectId && clientEmail && privateKey) {
-        this.firebaseApp = admin.apps.length
+        this.firebaseApp = admin.apps?.length
           ? admin.app()
           : admin.initializeApp({
               credential: admin.credential.cert({
