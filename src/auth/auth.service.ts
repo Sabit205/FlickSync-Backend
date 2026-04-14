@@ -114,9 +114,12 @@ export class AuthService {
       user: {
         id: user._id,
         username: user.username,
+        name: user.name || '',
         email: user.email,
         avatar: user.avatar,
         bio: user.bio,
+        location: user.location || '',
+        onboardingCompleted: user.onboardingCompleted || false,
       },
     };
   }

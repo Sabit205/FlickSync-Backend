@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Param,
   Query,
@@ -11,6 +12,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ParseObjectIdPipe } from '../common/pipes/object-id-validation.pipe';
 
@@ -60,6 +62,15 @@ export class PostsController {
     @CurrentUser('sub') userId: string,
   ) {
     return this.postsService.deletePost(postId, userId);
+  }
+
+  @Patch(':id')
+  async updatePost(
+    @Param('id', ParseObjectIdPipe) postId: string,
+    @CurrentUser('sub') userId: string,
+    @Body() dto: UpdatePostDto,
+  ) {
+    return this.postsService.updatePost(postId, userId, dto);
   }
 
   @Post(':id/like')

@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { Post, PostDocument } from './schemas/post.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
 
 @Injectable()
 export class PostsService {
@@ -22,7 +23,7 @@ export class PostsService {
 
     return this.postModel
       .findById(post._id)
-      .populate('userId', 'username avatar')
+      .populate('userId', 'username name avatar')
       .lean();
   }
 
@@ -56,8 +57,8 @@ export class PostsService {
       .find(query)
       .sort({ _id: -1 })
       .limit(limit + 1) // Fetch one extra to check if there are more
-      .populate('userId', 'username avatar')
-      .populate('comments.userId', 'username avatar')
+      .populate('userId', 'username name avatar')
+      .populate('comments.userId', 'username name avatar')
       .lean();
 
     const hasMore = posts.length > limit;
@@ -100,8 +101,8 @@ export class PostsService {
       .find(query)
       .sort({ _id: -1 })
       .limit(limit + 1)
-      .populate('userId', 'username avatar')
-      .populate('comments.userId', 'username avatar')
+      .populate('userId', 'username name avatar')
+      .populate('comments.userId', 'username name avatar')
       .lean();
 
     const hasMore = posts.length > limit;
@@ -123,8 +124,8 @@ export class PostsService {
   async getById(postId: string, currentUserId: string): Promise<any> {
     const post = await this.postModel
       .findById(postId)
-      .populate('userId', 'username avatar')
-      .populate('comments.userId', 'username avatar')
+      .populate('userId', 'username name avatar')
+      .populate('comments.userId', 'username name avatar')
       .lean();
 
     if (!post) throw new NotFoundException('Post not found');
@@ -172,7 +173,7 @@ export class PostsService {
     // Return the new comment with populated user
     const updatedPost = await this.postModel
       .findById(postId)
-      .populate('comments.userId', 'username avatar')
+      .populate('comments.userId', 'username name avatar')
       .lean();
 
     const newComment = updatedPost!.comments[updatedPost!.comments.length - 1];
@@ -200,5 +201,28 @@ export class PostsService {
 
     await this.postModel.findByIdAndDelete(postId);
     return { message: 'Post deleted' };
+  }
+
+  async updatePost(postId: string, userId: string, dto: UpdatePostDto): Promise<any> {
+    const post = await this.postModel.findById(postId);
+    if (!post) throw new NotFoundException('Post not found');
+
+    if (post.userId.toString() !== userId) {
+      throw new ForbiddenException('You can only edit your own posts');
+    }
+
+    const updated = await this.postModel
+      .findByIdAndUpdate(postId, { $set: dto }, { new: true })
+      .populate('userId', 'username name avatar')
+      .populate('comments.userId', 'username name avatar')
+      .lean();
+
+    return {
+      ...updated,
+      likeCount: updated!.likes?.length || 0,
+      commentCount: updated!.comments?.length || 0,
+      shareCount: updated!.shares?.length || 0,
+      isLiked: updated!.likes?.some((id: any) => id.toString() === userId) || false,
+    };
   }
 }

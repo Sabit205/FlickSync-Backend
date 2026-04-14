@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEnum, MaxLength, MinLength } from 'class-validator';
+import { IsOptional, IsString, IsEnum, MaxLength, MinLength, IsBoolean } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -6,6 +6,11 @@ export class UpdateProfileDto {
   @MinLength(3)
   @MaxLength(20)
   username?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  name?: string;
 
   @IsOptional()
   @IsString()
@@ -24,4 +29,8 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsEnum(['public', 'private'])
   profileVisibility?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  onboardingCompleted?: boolean;
 }

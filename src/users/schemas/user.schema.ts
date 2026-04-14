@@ -8,6 +8,9 @@ export class User {
   @Prop({ required: true, unique: true, index: true, trim: true, lowercase: true })
   username: string;
 
+  @Prop({ default: '' })
+  name: string;
+
   @Prop({ required: true, unique: true, index: true, trim: true, lowercase: true })
   email: string;
 
@@ -31,6 +34,9 @@ export class User {
 
   @Prop({ default: false })
   isEmailVerified: boolean;
+
+  @Prop({ default: false })
+  onboardingCompleted: boolean;
 
   @Prop({ default: null })
   verificationToken: string;
