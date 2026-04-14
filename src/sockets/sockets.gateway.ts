@@ -33,6 +33,9 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
   // Map<userId, Set<socketId>>
   private onlineUsers: Map<string, Set<string>> = new Map();
 
+  // Track active calls: Map<channelName, Set<userId>>
+  private activeCalls: Map<string, Set<string>> = new Map();
+
   constructor(
     private jwtService: JwtService,
     private configService: ConfigService,
@@ -128,6 +131,18 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
           // Only emit offline when all sockets disconnected
           this.server.emit('user-offline', { userId, username });
           this.logger.log(`User ${username} (${userId}) went offline`);
+
+          // End any active calls this user was in
+          this.activeCalls.forEach((participants, channelName) => {
+            if (participants.has(userId)) {
+              participants.delete(userId);
+              // Notify remaining participants
+              participants.forEach((pid) => {
+                this.server.to(`user:${pid}`).emit('call-ended', { channelName });
+              });
+              this.activeCalls.delete(channelName);
+            }
+          });
         }
       }
     }
@@ -315,6 +330,13 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
     const callerId = (client as any).userId;
     const callerUsername = (client as any).username;
 
+    // Track this call — add caller to the channel
+    if (!this.activeCalls.has(data.channelName)) {
+      this.activeCalls.set(data.channelName, new Set());
+    }
+    this.activeCalls.get(data.channelName)!.add(callerId);
+    this.activeCalls.get(data.channelName)!.add(data.targetUserId);
+
     // Fetch the caller's actual name from the DB
     const caller = await this.userModel.findById(callerId).select('name username avatar').lean();
     const callerName = caller?.name || callerUsername;
@@ -326,6 +348,8 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
       callType: data.callType,
       callerAvatar: caller?.avatar,
     });
+
+    this.logger.log(`User ${callerUsername} calling ${data.targetUserId} on channel ${data.channelName}`);
   }
 
   @SubscribeMessage('call-accepted')
@@ -334,6 +358,12 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
     @MessageBody() data: { callerId: string; channelName: string },
   ) {
     const accepterId = (client as any).userId;
+
+    // Ensure accepter is tracked in the call
+    if (this.activeCalls.has(data.channelName)) {
+      this.activeCalls.get(data.channelName)!.add(accepterId);
+    }
+
     this.server.to(`user:${data.callerId}`).emit('call-accepted', {
       accepterId,
       channelName: data.channelName,
@@ -345,19 +375,36 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { callerId: string; channelName: string },
   ) {
+    // Clean up the call tracking
+    this.activeCalls.delete(data.channelName);
+
     this.server.to(`user:${data.callerId}`).emit('call-rejected', {
       channelName: data.channelName,
     });
   }
 
-  @SubscribeMessage('call-ended')
-  handleCallEnded(
+  @SubscribeMessage('end-call')
+  handleEndCall(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { targetUserId: string; channelName: string },
+    @MessageBody() data: { channelName: string },
   ) {
-    this.server.to(`user:${data.targetUserId}`).emit('call-ended', {
-      channelName: data.channelName,
-    });
+    const userId = (client as any).userId;
+    const participants = this.activeCalls.get(data.channelName);
+
+    if (participants) {
+      // Notify ALL other participants that the call ended
+      participants.forEach((pid) => {
+        if (pid !== userId) {
+          this.server.to(`user:${pid}`).emit('call-ended', {
+            channelName: data.channelName,
+          });
+        }
+      });
+      // Clean up
+      this.activeCalls.delete(data.channelName);
+    }
+
+    this.logger.log(`Call ended on channel ${data.channelName} by user ${userId}`);
   }
 
   // ─── Utility ────────────────────────────────────────────────
