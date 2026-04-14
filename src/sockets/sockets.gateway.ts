@@ -179,7 +179,7 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
       // Populate and emit
       const populatedMessage = await this.messageModel
         .findById(message._id)
-        .populate('senderId', 'username avatar')
+        .populate('senderId', 'username name avatar')
         .lean();
 
       // Emit to all in room

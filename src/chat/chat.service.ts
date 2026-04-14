@@ -55,10 +55,10 @@ export class ChatService {
   async getUserRooms(userId: string): Promise<any[]> {
     const rooms = await this.chatRoomModel
       .find({ participants: new Types.ObjectId(userId) })
-      .populate('participants', 'username avatar')
+      .populate('participants', 'username name avatar')
       .populate({
         path: 'lastMessage',
-        populate: { path: 'senderId', select: 'username' },
+        populate: { path: 'senderId', select: 'username name' },
       })
       .sort({ updatedAt: -1 })
       .lean();
@@ -71,7 +71,7 @@ export class ChatService {
         );
         return {
           ...room,
-          displayName: (otherUser as any)?.username || 'Unknown',
+          displayName: (otherUser as any)?.name || (otherUser as any)?.username || 'Unknown',
           displayAvatar: (otherUser as any)?.avatar || '',
         };
       }
@@ -86,7 +86,7 @@ export class ChatService {
   async getRoomById(roomId: string): Promise<ChatRoomDocument> {
     const room = await this.chatRoomModel
       .findById(roomId)
-      .populate('participants', 'username avatar');
+      .populate('participants', 'username name avatar');
     if (!room) throw new NotFoundException('Chat room not found');
     return room;
   }
@@ -138,7 +138,7 @@ export class ChatService {
     // Return populated message
     return this.messageModel
       .findById(message._id)
-      .populate('senderId', 'username avatar')
+      .populate('senderId', 'username name avatar')
       .lean();
   }
 
@@ -168,7 +168,7 @@ export class ChatService {
       .find(query)
       .sort({ _id: -1 })
       .limit(limit + 1)
-      .populate('senderId', 'username avatar')
+      .populate('senderId', 'username name avatar')
       .lean();
 
     const hasMore = messages.length > limit;
