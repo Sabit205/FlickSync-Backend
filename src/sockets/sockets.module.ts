@@ -11,6 +11,7 @@ import { ChatRoom, ChatRoomSchema } from '../chat/schemas/chat-room.schema';
     MongooseModule.forFeature([
       { name: Message.name, schema: MessageSchema },
       { name: ChatRoom.name, schema: ChatRoomSchema },
+      { name: 'User', schema: require('../users/schemas/user.schema').UserSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

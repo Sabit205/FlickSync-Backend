@@ -23,7 +23,7 @@ export class CallsService {
     }
 
     try {
-      const { RtcTokenBuilder, RtcRole } = await import('agora-token');
+      const { RtcTokenBuilder, RtcRole } = require('agora-token');
 
       const expirationTimeInSeconds = 3600; // 1 hour
       const currentTimestamp = Math.floor(Date.now() / 1000);

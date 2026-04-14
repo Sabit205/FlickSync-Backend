@@ -38,6 +38,7 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
     private configService: ConfigService,
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
     @InjectModel(ChatRoom.name) private chatRoomModel: Model<ChatRoomDocument>,
+    @InjectModel('User') private userModel: Model<any>,
   ) {}
 
   // ─── Connection Handling ────────────────────────────────────
@@ -302,7 +303,7 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
   // ─── Call Signaling ─────────────────────────────────────────
 
   @SubscribeMessage('call-user')
-  handleCallUser(
+  async handleCallUser(
     @ConnectedSocket() client: Socket,
     @MessageBody()
     data: {
@@ -314,11 +315,16 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
     const callerId = (client as any).userId;
     const callerUsername = (client as any).username;
 
+    // Fetch the caller's actual name from the DB
+    const caller = await this.userModel.findById(callerId).select('name username avatar').lean();
+    const callerName = caller?.name || callerUsername;
+
     this.server.to(`user:${data.targetUserId}`).emit('incoming-call', {
       callerId,
-      callerUsername,
+      callerUsername: callerName, // We pass the display name but keep the property for compatibility
       channelName: data.channelName,
       callType: data.callType,
+      callerAvatar: caller?.avatar,
     });
   }
 
