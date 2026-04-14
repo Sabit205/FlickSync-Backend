@@ -81,6 +81,29 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
         client.join(`room:${room._id.toString()}`);
       });
 
+      // Mark all pending messages as 'delivered' for this user
+      const roomIds = rooms.map((r) => r._id);
+      if (roomIds.length > 0) {
+        const deliveredResult = await this.messageModel.updateMany(
+          {
+            roomId: { $in: roomIds },
+            senderId: { $ne: new Types.ObjectId(userId) },
+            readStatus: 'sent',
+          },
+          { $set: { readStatus: 'delivered' } },
+        );
+
+        if (deliveredResult.modifiedCount > 0) {
+          // Notify all rooms that messages were delivered
+          roomIds.forEach((roomId) => {
+            this.server.to(`room:${roomId.toString()}`).emit('messages-delivered', {
+              roomId: roomId.toString(),
+              deliveredTo: userId,
+            });
+          });
+        }
+      }
+
       // Broadcast online status
       this.server.emit('user-online', { userId, username: payload.username });
 
@@ -250,6 +273,29 @@ export class SocketsGateway implements OnGatewayConnection, OnGatewayDisconnect 
     client.to(`room:${data.roomId}`).emit('messages-read', {
       roomId: data.roomId,
       readBy: userId,
+    });
+  }
+
+  @SubscribeMessage('mark-delivered')
+  async handleMarkDelivered(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string },
+  ) {
+    const userId = (client as any).userId;
+    if (!userId) return;
+
+    await this.messageModel.updateMany(
+      {
+        roomId: new Types.ObjectId(data.roomId),
+        senderId: { $ne: new Types.ObjectId(userId) },
+        readStatus: 'sent',
+      },
+      { $set: { readStatus: 'delivered' } },
+    );
+
+    client.to(`room:${data.roomId}`).emit('messages-delivered', {
+      roomId: data.roomId,
+      deliveredTo: userId,
     });
   }
 
