@@ -127,6 +127,11 @@ export class UsersController {
     return { message: 'FCM token updated' };
   }
 
+  @Get('blocked')
+  async getBlockedUsers(@CurrentUser('sub') userId: string) {
+    return this.usersService.getBlockedUsers(userId);
+  }
+
   @Get(':id')
   async getProfile(
     @Param('id', ParseObjectIdPipe) userId: string,

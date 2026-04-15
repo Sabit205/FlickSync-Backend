@@ -261,6 +261,14 @@ export class UsersService {
     return user?.sentFriendRequests || [];
   }
 
+  async getBlockedUsers(userId: string): Promise<any[]> {
+    const user = await this.userModel
+      .findById(userId)
+      .populate('blockedUsers', 'username name avatar bio')
+      .lean();
+    return user?.blockedUsers || [];
+  }
+
   // ─── E2E Encryption Keys ────────────────────────────────────
 
   async storePublicKey(userId: string, publicKey: string): Promise<void> {
